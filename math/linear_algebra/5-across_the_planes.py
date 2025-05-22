@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """  Adds two matrices element-wise """
 
-
 def add_matrices2D(mat1, mat2):
-     """ returns new matrix, the sum of two 2D matrices added element-wise """
+    """ returns new matrix, the sum of two 2D matrices added element-wise """
     if len(mat1) == len(mat2) and len(mat1[0]) == len(mat2[0]):
         return [
             [
