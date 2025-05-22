@@ -5,7 +5,6 @@
 def add_matrices(mat1, mat2):
     """ returns list of integers representing dimensions of given matrix """
 
-
     if isinstance(mat1, list) and isinstance(mat2, list):
         if len(mat1) == len(mat2):
             result = []
