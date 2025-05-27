@@ -18,6 +18,7 @@ def determinant(matrix):
         return matrix[0][0]
     if len(matrix) == 2:
         return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
     size = len(matrix)
     answer = 0
     for j in range(size):
@@ -56,20 +57,23 @@ def cofactor(matrix):
     """
     if not all(isinstance(row, list) for row in matrix):
         raise TypeError("matrix must be a list of lists")
+
     if matrix == [[]] or not all(len(matrix) == len(row) for row in matrix):
         raise ValueError("matrix must be a non-empty square matrix")
+
     if len(matrix) == 1:
         return [[1]]
+
     if len(matrix) == 2:
         return [[matrix[1][1], -matrix[1][0]], [-matrix[0][1], matrix[0][0]]]
-
+    
     minor_matrix = minor(matrix)
-
+    
     cofactor_matrix = []
     for i in range(len(minor_matrix)):
         cofactor_row = []
         for j in range(len(minor_matrix)):
             cofactor_row.append(minor_matrix[i][j] * (-1)**(i+j))
         cofactor_matrix.append(cofactor_row)
-
-     return cofactor_matrix
+    
+    return cofactor_matrix
