@@ -64,12 +64,12 @@ def cofactor(matrix):
         return [[matrix[1][1], -matrix[1][0]], [-matrix[0][1], matrix[0][0]]]
 
     minor_matrix = minor(matrix)
-    
+
     cofactor_matrix = []
     for i in range(len(minor_matrix)):
         cofactor_row = []
         for j in range(len(minor_matrix)):
             cofactor_row.append(minor_matrix[i][j] * (-1)**(i+j))
         cofactor_matrix.append(cofactor_row)
-    
-    return cofactor_matrix
+
+     return cofactor_matrix
