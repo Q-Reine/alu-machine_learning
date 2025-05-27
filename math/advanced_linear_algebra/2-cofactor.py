@@ -2,6 +2,8 @@
 """
 Function to calculate the cofactor of a matrix.
 """
+
+
 def determinant(matrix):
     """
     Calculates the determinant of a matrix.
@@ -23,6 +25,7 @@ def determinant(matrix):
         sub_matrix = [row[:j] + row[j+1:] for row in matrix[1:]]
         answer += sign * matrix[0][j] * determinant(sub_matrix)
     return answer
+
 
 def minor(matrix):
     """
@@ -46,6 +49,7 @@ def minor(matrix):
         minor_matrix.append(minor_row)
     return minor_matrix
 
+
 def cofactor(matrix):
     """
     Calculates the cofactor of a matrix.
@@ -58,7 +62,7 @@ def cofactor(matrix):
         return [[1]]
     if len(matrix) == 2:
         return [[matrix[1][1], -matrix[1][0]], [-matrix[0][1], matrix[0][0]]]
-    
+
     minor_matrix = minor(matrix)
     
     cofactor_matrix = []
