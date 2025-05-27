@@ -75,5 +75,5 @@ def cofactor(matrix):
         for j in range(len(minor_matrix)):
             cofactor_row.append(minor_matrix[i][j] * (-1)**(i+j))
         cofactor_matrix.append(cofactor_row)
- 
+
     return cofactor_matrix
