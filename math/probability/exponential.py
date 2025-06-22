@@ -72,7 +72,7 @@ class Exponential:
 
         parameters:
             x [int]: time period
-                If x is out of range, return 0
+                If x is out of range, return 0;
 
         return:
             the CDF value for x
