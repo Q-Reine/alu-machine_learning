@@ -11,6 +11,7 @@ class MultiNormal:
     """
     Class that represents Multivariate Normal Distribution
     """
+
     def __init__(self, data):
         """
         Class constructor
