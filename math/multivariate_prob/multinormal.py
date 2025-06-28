@@ -57,4 +57,4 @@ class MultiNormal:
         pdf = 1.0 / np.sqrt(((2 * np.pi) ** d) * det)
         mult = np.matmul(np.matmul((x - self.mean).T, inv), (x - self.mean))
         pdf *= np.exp(-0.5 * mult)
-        return pdf = pdf[0][0]
+        return pdf[0][0]
