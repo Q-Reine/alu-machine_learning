@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Defines a function that performs convolution with custom padding on 
+Defines a function that performs convolution with custom padding on
 a grayscale image
 """
 
