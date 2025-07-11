@@ -24,19 +24,16 @@ def convolve_grayscale_same(images, kernel):
     returns:
         numpy.ndarray contained convolved images
     """
-    m = images.shape[0]
-    height = images.shape[1]
-    width = images.shape[2]
-    kh = kernel.shape[0]
-    kw = kernel.shape[1]
+    m, height, width = images.shape[0], images.shape[1], images.shape[2]
+    kh, kw = kernel.shape[0], kernel.shape[1]
     if (kh % 2) == 1:
-        ph = (kh - 1) / 2
+        ph = (kh - 1) // 2
     else:
-        ph = kh / 2
+        ph = kh // 2
     if (kw % 2) == 1:
-        pw = (kw - 1) / 2
+        pw = (kw - 1) // 2
     else:
-        pw = kw / 2
+        pw = kw // 2
     images = np.pad(images, ((0, 0), (ph, ph), (pw, pw)),
                     'constant', constant_values=0)
     convoluted = np.zeros((m, height, width))
