@@ -21,11 +21,14 @@ def autoencoder(input_dims, hidden_layers, latent_dims):
     Y_prev = X_input
 
     for nodes in hidden_layers:
-        Y_prev = keras.layers.Dense(units=nodes, activation="relu")(Y_prev)
+        Y_prev = keras.layers.Dense(units=nodes,
+                                    activation="relu")(Y_prev)
 
     # Separate Dense layers for mean and log variance
-    z_mean = keras.layers.Dense(units=latent_dims, activation=None)(Y_prev)
-    z_log_sigma = keras.layers.Dense(units=latent_dims, activation=None)(Y_prev)
+    z_mean = keras.layers.Dense(units=latent_dims,
+                                activation=None)(Y_prev)
+    z_log_sigma = keras.layers.Dense(units=latent_dims,
+                                     activation=None)(Y_prev)
 
     # Reparameterization trick
     def sampling(args):
@@ -35,7 +38,9 @@ def autoencoder(input_dims, hidden_layers, latent_dims):
         epsilon = keras.backend.random_normal(shape=(batch, dim))
         return z_m + keras.backend.exp(z_log_var / 2) * epsilon
 
-    z = keras.layers.Lambda(sampling, output_shape=(latent_dims,))([z_mean, z_log_sigma])
+    z = keras.layers.Lambda(sampling,
+                            output_shape=(latent_dims,)
+                            )([z_mean, z_log_sigma])
 
     encoder = keras.Model(X_input, [z, z_mean, z_log_sigma])
 
@@ -44,9 +49,11 @@ def autoencoder(input_dims, hidden_layers, latent_dims):
     Y_prev = X_decode
 
     for nodes in reversed(hidden_layers):
-        Y_prev = keras.layers.Dense(units=nodes, activation="relu")(Y_prev)
+        Y_prev = keras.layers.Dense(units=nodes,
+                                    activation="relu")(Y_prev)
 
-    output = keras.layers.Dense(units=input_dims, activation="sigmoid")(Y_prev)
+    output = keras.layers.Dense(units=input_dims,
+                                activation="sigmoid")(Y_prev)
     decoder = keras.Model(X_decode, output)
 
     # ----- Autoencoder -----
@@ -59,7 +66,9 @@ def autoencoder(input_dims, hidden_layers, latent_dims):
         xent_loss = keras.backend.binary_crossentropy(x, x_decoded)
         xent_loss = keras.backend.sum(xent_loss, axis=1)
         kl_loss = -0.5 * keras.backend.sum(
-            1 + e_log_sigma - keras.backend.square(e_mean) - keras.backend.exp(e_log_sigma),
+            1 + e_log_sigma
+            - keras.backend.square(e_mean)
+            - keras.backend.exp(e_log_sigma),
             axis=1,
         )
         return xent_loss + kl_loss
