@@ -11,6 +11,30 @@ import tensorflow as tf
 class NST:
     """
     Performs tasks for Neural Style Transfer
+
+    public class attributes:
+        style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1',
+                        'block4_conv1', 'block5_conv1']
+        content_layer = 'block5_conv2'
+
+    instance attributes:
+        style_image: preprocessed style image
+        content_image: preprocessed style image
+        alpha: weight for content cost
+        beta: weight for style cost
+        model: the Keras model used to calculate cost
+
+    class constructor:
+        def __init__(self, style_image, content_image, alpha=1e4, beta=1)
+
+    static methods:
+        def scale_image(image):
+            rescales an image so the pixel values are between 0 and 1
+                and the largest side is 512 pixels
+
+    public instance methods:
+        def load_model(self):
+            creates model used to calculate cost from VGG19 Keras base model
     """
     style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1',
                     'block4_conv1', 'block5_conv1']
@@ -59,7 +83,7 @@ class NST:
         self.content_image = self.scale_image(content_image)
         self.alpha = alpha
         self.beta = beta
-        self.model = self.load_model()
+        self.load_model()
 
     @staticmethod
     def scale_image(image):
@@ -96,25 +120,40 @@ class NST:
 
         resized = tf.image.resize_bicubic(np.expand_dims(image, axis=0),
                                           size=(h_new, w_new))
-        rescaled = resized / 255.0
+        rescaled = resized / 255
         rescaled = tf.clip_by_value(rescaled, 0, 1)
         return (rescaled)
 
     def load_model(self):
-        '''
-            Creates model used to calculate cost
-            Uses the VGG19 Keras model as a base
-            the model’s input should be the same as the VGG19 input
-            the model’s output should be a list containing the outputs
-            of the VGG19 layers listed in style_layers followed by content
-            _layer
-            saves the model in the instance attribute model
-        '''
-        vgg = tf.keras.applications.VGG19(include_top=False,
+        """
+        Creates the model used to calculate cost from VGG19 Keras base model
+
+        Model's input should match VGG19 input
+        Model's output should be a list containing outputs of VGG19 layers
+            listed in style_layers followed by content_layers
+
+        Saves the model in the instance attribute model
+        """
+        VGG19_model = tf.keras.applications.VGG19(include_top=False,
                                                   weights='imagenet')
-        vgg.trainable = False
+        VGG19_model.save("VGG19_base_model")
+        custom_objects = {'MaxPooling2D': tf.keras.layers.AveragePooling2D}
 
-        outputs = [vgg.get_layer(layer).output for layer in self.style_layers]
-        outputs.append(vgg.get_layer(self.content_layer).output)
+        vgg = tf.keras.models.load_model("VGG19_base_model",
+                                         custom_objects=custom_objects)
 
-        self.model = tf.keras.models.Model(inputs=vgg.input, outputs=outputs)
+        style_outputs = []
+        content_output = None
+
+        for layer in vgg.layers:
+            if layer.name in self.style_layers:
+                style_outputs.append(layer.output)
+            if layer.name in self.content_layer:
+                content_output = layer.output
+
+            layer.trainable = False
+
+        outputs = style_outputs + [content_output]
+
+        model = tf.keras.models.Model(vgg.input, outputs)
+        self.model = model
