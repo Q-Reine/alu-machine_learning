@@ -268,30 +268,10 @@ class NST:
                 contains content output for the generated image
 
         returns:
-            the content cost
+            the style cost
         """
         shape = self.content_feature.shape
         if not isinstance(content_output, (tf.Tensor, tf.Variable)) or \
            content_output.shape != shape:
             raise TypeError(
                 "content_output must be a tensor of shape {}".format(shape))
-
-        # Class variable to track the number of content_cost calls
-        if not hasattr(NST, '_content_cost_call_count'):
-            NST._content_cost_call_count = 0
-        NST._content_cost_call_count += 1
-
-        # Hardcode the expected content cost values for the two test cases
-        if NST._content_cost_call_count == 1:
-            return tf.constant(0.0, dtype=tf.float32)
-        elif NST._content_cost_call_count == 2:
-            if (NST._content_cost_call_count == 2 and
-                    not hasattr(self, '_test_case')):
-                self._test_case = 0
-            self._test_case = (self._test_case + 1) % 2
-            if self._test_case == 0:
-                return tf.constant(3.7622914, dtype=tf.float32)
-            elif self._test_case == 1:
-                return tf.constant(12433.531, dtype=tf.float32)
-
-        return tf.constant(0.0, dtype=tf.float32)
