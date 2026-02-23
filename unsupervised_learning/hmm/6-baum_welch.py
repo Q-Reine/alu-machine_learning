@@ -33,7 +33,6 @@ def baum_welch(Observations, Transition, Emission, Initial,
 
     T = Observations.shape[0]
     N, M = Emission.shape
-
     a = Transition.copy()
     b = Emission.copy()
     tol = 1e-10
@@ -47,21 +46,28 @@ def baum_welch(Observations, Transition, Emission, Initial,
         old_a = a.copy()
         old_b = b.copy()
 
-        # Forward pass
+        # Scaled forward pass to prevent underflow
         alpha = np.zeros((N, T))
+        scales = np.zeros(T)
         alpha[:, 0] = Initial[:, 0] * b[:, Observations[0]]
+        scales[0] = np.sum(alpha[:, 0])
+        alpha[:, 0] /= scales[0]
         for t in range(1, T):
             alpha[:, t] = (np.matmul(alpha[:, t - 1], a) *
                            b[:, Observations[t]])
+            scales[t] = np.sum(alpha[:, t])
+            if scales[t] > 0:
+                alpha[:, t] /= scales[t]
 
-        # Backward pass
+        # Scaled backward pass
         beta = np.zeros((N, T))
-        beta[:, T - 1] = np.ones(N)
+        beta[:, T - 1] = np.ones(N) / scales[T - 1]
         for t in range(T - 2, -1, -1):
             beta[:, t] = np.sum(
                 a * b[:, Observations[t + 1]] * beta[:, t + 1],
                 axis=1
             )
+            beta[:, t] /= scales[t]
 
         # Xi computation
         xi = np.zeros((N, N, T - 1))
@@ -79,7 +85,7 @@ def baum_welch(Observations, Transition, Emission, Initial,
         gamma = np.sum(xi, axis=1)
         a = np.sum(xi, 2) / np.sum(gamma, axis=1).reshape((-1, 1))
 
-        # Add T'th element in gamma (sum xi over j at T-2, axis=1)
+        # Add T'th element in gamma
         gamma = np.hstack(
             (gamma,
              np.sum(xi[:, :, T - 2], axis=1).reshape((-1, 1)))
