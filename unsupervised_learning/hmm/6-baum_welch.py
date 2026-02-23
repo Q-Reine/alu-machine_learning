@@ -15,8 +15,6 @@ being a uniform distribution
 Returns: the converged Transition, Emission, or None, None on failure
 """
 import numpy as np
-backward = __import__('5-backward').backward
-forward = __import__('3-forward').forward
 
 
 def baum_welch(Observations, N, M,
