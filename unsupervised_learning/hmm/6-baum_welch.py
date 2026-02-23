@@ -68,18 +68,16 @@ def baum_welch(Observations, Transition, Emission, Initial, iterations=1000):
                 numerator = a * b * c * d
                 xi[i, :, t] = numerator / denominator
 
-        # gamma for t=0..T-2: sum xi over j (axis=1)
-        x_g = np.sum(xi, axis=1)  # shape (N, T-1)
+        x_g = np.sum(xi, axis=1) 
 
-        # Transition update
         num = np.sum(xi, 2)
         den = np.sum(x_g, axis=1).reshape((-1, 1))
         Transition = num / den
 
-        # gamma for t=T-1: sum xi[:, :, T-2] over j (axis=1), not axis=0
-        sum_i = np.sum(xi[:, :, T - 2], axis=1)  # FIX: was axis=0, should be axis=1
+        
+        sum_i = np.sum(xi[:, :, T - 2], axis=1)  
         sum_i = sum_i.reshape((-1, 1))
-        x_g = np.hstack((x_g, sum_i))  # shape (N, T)
+        x_g = np.hstack((x_g, sum_i))  
 
         denominator = np.sum(x_g, axis=1)
         denominator = denominator.reshape((-1, 1))
