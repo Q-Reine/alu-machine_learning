@@ -28,16 +28,15 @@ def viterbi(Observation, Emission, Transition, Initial):
         T = Observation.shape[0]
         N = Transition.shape[0]
         omega = np.zeros((T, N))
-        omega[0, :] = np.log(Initial.T * Emission[:, Observation[0]])
+        with np.errstate(divide='ignore'):
+            omega[0, :] = np.log(Initial.T * Emission[:, Observation[0]])
         prev = np.zeros((T - 1, N))
         for t in range(1, T):
             for j in range(N):
-                # Same as Forward Probability
-                a1 = omega[t-1]
-                a2 = np.log(Transition[:, j])
-                a3 = np.log(Emission[j, Observation[t]])
-                probability = (omega[t - 1] + np.log(Transition[:, j]) +
-                               np.log(Emission[j, Observation[t]]))
+                with np.errstate(divide='ignore'):
+                    probability = (omega[t - 1] +
+                                   np.log(Transition[:, j]) +
+                                   np.log(Emission[j, Observation[t]]))
                 # Most probable state given previous state at time t (1)
                 prev[t - 1, j] = np.argmax(probability)
                 # This is the probability of the most probable state (2)
@@ -59,6 +58,6 @@ def viterbi(Observation, Emission, Transition, Initial):
         for s in S:
             result.append(int(s))
         P = np.max(np.exp(omega[-1:, :]))
-        return (P, result)
+        return (result, P)
     except Exception:
         return None, None
