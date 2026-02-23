@@ -46,7 +46,7 @@ def baum_welch(Observations, Transition, Emission, Initial,
         old_a = a.copy()
         old_b = b.copy()
 
-        # Scaled forward pass to prevent underflow
+        # Scaled forward pass to prevent numerical underflow
         alpha = np.zeros((N, T))
         scales = np.zeros(T)
         alpha[:, 0] = Initial[:, 0] * b[:, Observations[0]]
