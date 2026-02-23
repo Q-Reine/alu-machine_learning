@@ -19,56 +19,84 @@ import numpy as np
 
 def baum_welch(Observations, N, M,
                Transition=None, Emission=None, Initial=None):
-    """performs the Baum-Welch algorithm for a hidden markov model"""
     try:
-        tol = 1e-10
-        T = len(Observations)
+        Observations = np.asarray(Observations, dtype=int)
+        T = Observations.shape[0]
+
         if Transition is None:
             Transition = np.ones((N, N)) / N
+        else:
+            Transition = np.asarray(Transition, dtype=float)
+            Transition /= np.sum(Transition, axis=1, keepdims=True)
+
         if Emission is None:
             Emission = np.ones((N, M)) / M
+        else:
+            Emission = np.asarray(Emission, dtype=float)
+            Emission /= np.sum(Emission, axis=1, keepdims=True)
+
         if Initial is None:
             Initial = np.ones((N, 1)) / N
-        a = Transition
-        b = Emission
-        cond = False
-        norm_a = 0
-        norm_b = 0
-        while not cond:
-            old_norm_a = norm_a
-            old_norm_b = norm_b
-            old_a = a.copy()
-            old_b = b.copy()
-            _, alpha = forward(Observations, b, a, Initial)
-            _, beta = backward(Observations, b, a, Initial)
-            xi = np.zeros((N, N, T - 1))
-            for t in range(T - 1):
-                denominator = (np.dot(np.dot(alpha[:, t].T, a) *
-                                      b[:, Observations[t+1]].T,
-                                      beta[:, t+1]))
+        else:
+            Initial = np.asarray(Initial, dtype=float).reshape(-1, 1)
+            Initial /= np.sum(Initial)
+
+        max_iter = 300
+        tol = 1e-6
+        prev_loglik = -np.inf
+
+        for it in range(max_iter):
+            loglik, alpha = forward(Observations, Emission, Transition, Initial)
+            _, beta = backward(Observations, Emission, Transition, Initial)
+
+            if not np.isfinite(loglik):
+                return None, None
+
+            gamma = alpha * beta
+            gamma /= np.sum(gamma, axis=1, keepdims=True)
+
+            xi = np.zeros((T-1, N, N))
+
+            for t in range(T-1):
+                denom = np.sum(alpha[t] * np.dot(Transition, Emission[:, Observations[t+1]] * beta[t+1]))
+                if denom == 0:
+                    denom = 1e-150
                 for i in range(N):
-                    numerator = (alpha[i, t] * a[i, :] *
-                                 b[:, Observations[t + 1]].T *
-                                 beta[:, t+1].T)
-                    xi[i, :, t] = numerator / denominator
-            gamma = np.sum(xi, axis=1)
-            a = np.sum(xi, 2) / np.sum(gamma, axis=1).reshape((-1, 1))
-            # Add additional T'th element in gamma
-            gamma = np.hstack(
-                (gamma,
-                 np.sum(xi[:, :, T - 2], axis=1).reshape((-1, 1)))
-            )
-            K = b.shape[1]
-            denominator = np.sum(gamma, axis=1)
-            for l in range(K):
-                b[:, l] = np.sum(gamma[:, Observations == l], axis=1)
-            b = np.divide(b, denominator.reshape((-1, 1)))
-            norm_a = np.linalg.norm(np.abs(old_a - a))
-            norm_b = np.linalg.norm(np.abs(old_b - b))
-            cond = (
-                (np.abs(old_norm_a - norm_a) < tol) and
-                (np.abs(old_norm_b - norm_b) < tol)
-            )
-        return a, b
+                    for j in range(N):
+                        xi[t, i, j] = (
+                            alpha[t, i] *
+                            Transition[i, j] *
+                            Emission[j, Observations[t+1]] *
+                            beta[t+1, j]
+                        ) / denom
+
+            num_a = np.sum(xi, axis=0)
+            denom_a = np.sum(gamma[:-1], axis=0)
+            new_Transition = num_a / (denom_a[:, np.newaxis] + 1e-150)
+
+            new_Emission = np.zeros((N, M))
+            for k in range(M):
+                mask = (Observations == k)
+                new_Emission[:, k] = np.sum(gamma[mask], axis=0)
+
+            denom_b = np.sum(gamma, axis=0)
+            new_Emission /= (denom_b[:, np.newaxis] + 1e-150)
+
+            new_Initial = gamma[0, :].reshape(-1, 1)
+
+            if abs(loglik - prev_loglik) < tol:
+                break
+
+            prev_loglik = loglik
+
+            Transition = new_Transition
+            Emission = new_Emission
+            Initial = new_Initial
+
+        Transition /= np.sum(Transition, axis=1, keepdims=True)
+        Emission   /= np.sum(Emission,   axis=1, keepdims=True)
+
+        return Transition, Emission
+
     except Exception:
         return None, None
