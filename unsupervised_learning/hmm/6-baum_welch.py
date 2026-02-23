@@ -15,165 +15,64 @@ being a uniform distribution
 Returns: the converged Transition, Emission, or None, None on failure
 """
 import numpy as np
+backward = __import__('5-backward').backward
+forward = __import__('3-forward').forward
 
 
-def baum_welch(Observations, Transition, Emission, Initial, iterations=1000):
-    """[summary]
-
-    Args:
-        Observations ([type]): [description]
-        Transition ([type]): [description]
-        Emission ([type]): [description]
-        Initial ([type]): [description]
-        iterations (int, optional): [description]. Defaults to 1000.
-
-    Returns:
-        [type]: [description]
-    """
-    if not isinstance(Observations, np.ndarray) \
-            or len(Observations.shape) != 1:
-        return None, None
-    if not isinstance(Emission, np.ndarray) or len(Emission.shape) != 2:
-        return None, None
-    if not isinstance(Transition, np.ndarray) or len(Transition.shape) != 2:
-        return None, None
-    if not isinstance(Initial, np.ndarray) or len(Initial.shape) != 2:
-        return None, None
-    T = Observations.shape[0]
-    N, M = Emission.shape
-    if Transition.shape[0] != N or Transition.shape[1] != N:
-        return None, None
-    if Initial.shape[0] != N or Initial.shape[1] != 1:
-        return None, None
-    if not np.sum(Emission, axis=1).all():
-        return None, None
-    if not np.sum(Transition, axis=1).all():
-        return None, None
-    if not np.sum(Initial) == 1:
-        return None, None
-    for n in range(iterations):
-        _, alpha = forward(Observations, Emission, Transition, Initial)
-        _, B__ = backward(Observations, Emission, Transition, Initial)
-        xi = np.zeros((N, N, T - 1))
-        for t in range(T - 1):
-            a = np.matmul(alpha[:, t].T, Transition)
-            b = Emission[:, Observations[t + 1]].T
-            c = B__[:, t + 1]
-            denominator = np.matmul(a * b, c)
-            for i in range(N):
-                a = alpha[i, t]
-                b = Transition[i]
-                c = Emission[:, Observations[t + 1]].T
-                d = B__[:, t + 1].T
-                numerator = a * b * c * d
-                xi[i, :, t] = numerator / denominator
-
-        x_g = np.sum(xi, axis=1) 
-
-        num = np.sum(xi, 2)
-        den = np.sum(x_g, axis=1).reshape((-1, 1))
-        Transition = num / den
-
-        
-        sum_i = np.sum(xi[:, :, T - 2], axis=1)  
-        sum_i = sum_i.reshape((-1, 1))
-        x_g = np.hstack((x_g, sum_i))  
-
-        denominator = np.sum(x_g, axis=1)
-        denominator = denominator.reshape((-1, 1))
-        for i in range(M):
-            x_g_i = x_g[:, Observations == i]
-            Emission[:, i] = np.sum(x_g_i, axis=1)
-        Emission = Emission / denominator
-    return Transition, Emission
-
-
-def backward(Observation, Emission, Transition, Initial):
-    """[summary]
-
-    Args:
-        Observation ([type]): [description]
-        Emission ([type]): [description]
-        Transition ([type]): [description]
-        Initial ([type]): [description]
-
-    Returns:
-        [type]: [description]
-    """
-    if not isinstance(Observation, np.ndarray) or len(Observation.shape) != 1:
-        return None, None
-    if not isinstance(Emission, np.ndarray) or len(Emission.shape) != 2:
-        return None, None
-    if not isinstance(Transition, np.ndarray) or len(Transition.shape) != 2:
-        return None, None
-    if not isinstance(Initial, np.ndarray) or len(Initial.shape) != 2:
-        return None, None
-    T = Observation.shape[0]
-    N, M = Emission.shape
-    if Transition.shape[0] != N or Transition.shape[1] != N:
-        return None, None
-    if Initial.shape[0] != N or Initial.shape[1] != 1:
-        return None, None
-    if not np.sum(Emission, axis=1).all():
-        return None, None
-    if not np.sum(Transition, axis=1).all():
-        return None, None
-    if not np.sum(Initial) == 1:
-        return None, None
-    B__ = np.zeros((N, T))
-    B__[:, T - 1] = np.ones(N)
-    for t in range(T - 2, -1, -1):
+def baum_welch(Observations, N, M,
+               Transition=None, Emission=None, Initial=None):
+    """performs the Baum-Welch algorithm for a hidden markov model"""
+    try:
+        tol = 1e-10
+        T = len(Observations)
+        if Transition is None:
+            Transition = np.random.uniform(0, 1, size=(N, N))
+        if Emission is None:
+            Emission = np.random.uniform(0, 1, size=(N, M))
+        if Initial is None:
+            Initial = np.random.uniform(0, 1, size=(N, 1))
         a = Transition
-        b = Emission[:, Observation[t + 1]]
-        c = B__[:, t + 1]
-        abc = a * b * c
-        prob = np.sum(abc, axis=1)
-        B__[:, t] = prob
-    P_first = Initial[:, 0] * Emission[:, Observation[0]] * B__[:, 0]
-    P = np.sum(P_first)
-    return P, B__
-
-
-def forward(Observation, Emission, Transition, Initial):
-    """[summary]
-
-    Args:
-        Observations ([type]): [description]
-        Transition ([type]): [description]
-        Emission ([type]): [description]
-        Initial ([type]): [description]
-        iterations (int, optional): [description]. Defaults to 1000.
-
-    Returns:
-        [type]: [description]
-    """
-    if not isinstance(Observation, np.ndarray) or len(Observation.shape) != 1:
+        b = Emission
+        cond = False
+        count = 0
+        norm_a = 0
+        norm_b = 0
+        while not cond:
+            count = count + 1
+            print(count)
+            old_norm_a = norm_a
+            old_norm_b = norm_b
+            old_a = a.copy()
+            old_b = b.copy()
+            _, alpha = forward(Observations, b, a, Initial)
+            _, beta = backward(Observations, b, a, Initial)
+            xi = np.zeros((N, N, T - 1))
+            for t in range(T - 1):
+                denominator = (np.dot(np.dot(alpha[:, t].T, a) *
+                                      b[:, Observations[t+1]].T, beta[:, t+1]))
+                for i in range(N):
+                    numerator = (alpha[i, t] * a[i, :] *
+                                 b[:, Observations[t + 1]].T * beta[:, t+1].T)
+                    xi[i, :, t] = numerator / denominator
+            gamma = np.sum(xi, axis=1)
+            a = np.sum(xi, 2) / np.sum(gamma, axis=1).reshape((-1, 1))
+            # Add additional T'th element in gamma
+            gamma = np.hstack((gamma, np.sum(xi[:, :, T - 2],
+                                             axis=0).reshape((-1, 1))))
+            K = b.shape[1]
+            denominator = np.sum(gamma, axis=1)
+            for l in range(K):
+                b[:, l] = np.sum(gamma[:, Observations == l], axis=1)
+            b = np.divide(b, denominator.reshape((-1, 1)))
+            # conditional convergence based on normal over difference of 
+            # old and new matrix (Emission & Transition)
+            norm_a = np.linalg.norm(np.abs(old_a - a))
+            norm_b = np.linalg.norm(np.abs(old_b - b))
+            print ("Norm Transition= ", norm_a)
+            print ("Norm Emission= ", norm_b)
+            print ("Difference in Transition= ", np.abs(old_norm_a - norm_a))
+            print ("Difference in Emission= ", np.abs(old_norm_b - norm_b))
+            cond = (np.abs(old_norm_a - norm_a) < tol) and (np.abs(old_norm_b == norm_b) < tol)
+        return a, b
+    except Exception:
         return None, None
-    if not isinstance(Emission, np.ndarray) or len(Emission.shape) != 2:
-        return None, None
-    if not isinstance(Transition, np.ndarray) or len(Transition.shape) != 2:
-        return None, None
-    if not isinstance(Initial, np.ndarray) or len(Initial.shape) != 2:
-        return None, None
-    T = Observation.shape[0]
-    N, M = Emission.shape
-    if Transition.shape[0] != N or Transition.shape[1] != N:
-        return None, None
-    if Initial.shape[0] != N or Initial.shape[1] != 1:
-        return None, None
-    if not np.sum(Emission, axis=1).all():
-        return None, None
-    if not np.sum(Transition, axis=1).all():
-        return None, None
-    if not np.sum(Initial) == 1:
-        return None, None
-    F = np.zeros((N, T))
-    Obs_i = Observation[0]
-    prob = np.multiply(Initial[:, 0], Emission[:, Obs_i])
-    F[:, 0] = prob
-    for i in range(1, T):
-        Obs_i = Observation[i]
-        state = np.matmul(F[:, i - 1], Transition)
-        prob = np.multiply(state, Emission[:, Obs_i])
-        F[:, i] = prob
-    return np.sum(F[:, T - 1]), F
