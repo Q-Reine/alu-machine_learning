@@ -17,6 +17,32 @@ Returns: the converged Transition, Emission, or None, None on failure
 import numpy as np
 
 
+def _forward(Observation, Emission, Transition, Initial):
+    """performs the forward algorithm for a hidden markov model"""
+    T = Observation.shape[0]
+    N = Transition.shape[0]
+    F = np.zeros((N, T))
+    F[:, 0] = Initial[:, 0] * Emission[:, Observation[0]]
+    for t in range(1, T):
+        state = np.matmul(F[:, t - 1], Transition)
+        F[:, t] = state * Emission[:, Observation[t]]
+    return np.sum(F[:, T - 1]), F
+
+
+def _backward(Observation, Emission, Transition, Initial):
+    """performs the backward algorithm for a hidden markov model"""
+    T = Observation.shape[0]
+    N = Transition.shape[0]
+    B = np.zeros((N, T))
+    B[:, T - 1] = np.ones(N)
+    for t in range(T - 2, -1, -1):
+        b = Emission[:, Observation[t + 1]]
+        c = B[:, t + 1]
+        B[:, t] = np.sum(Transition * b * c, axis=1)
+    P = np.sum(Initial[:, 0] * Emission[:, Observation[0]] * B[:, 0])
+    return P, B
+
+
 def forward(Observation, Emission, Transition, Initial):
     """performs the forward algorithm for a hidden markov model"""
     if not isinstance(Observation, np.ndarray) \
@@ -35,12 +61,7 @@ def forward(Observation, Emission, Transition, Initial):
         return None, None
     if Initial.shape[0] != N or Initial.shape[1] != 1:
         return None, None
-    F = np.zeros((N, T))
-    F[:, 0] = Initial[:, 0] * Emission[:, Observation[0]]
-    for t in range(1, T):
-        state = np.matmul(F[:, t - 1], Transition)
-        F[:, t] = state * Emission[:, Observation[t]]
-    return np.sum(F[:, T - 1]), F
+    return _forward(Observation, Emission, Transition, Initial)
 
 
 def backward(Observation, Emission, Transition, Initial):
@@ -61,30 +82,26 @@ def backward(Observation, Emission, Transition, Initial):
         return None, None
     if Initial.shape[0] != N or Initial.shape[1] != 1:
         return None, None
-    B = np.zeros((N, T))
-    B[:, T - 1] = np.ones(N)
-    for t in range(T - 2, -1, -1):
-        b = Emission[:, Observation[t + 1]]
-        c = B[:, t + 1]
-        B[:, t] = np.sum(Transition * b * c, axis=1)
-    P = np.sum(Initial[:, 0] * Emission[:, Observation[0]] * B[:, 0])
-    return P, B
+    return _backward(Observation, Emission, Transition, Initial)
 
 
 def baum_welch(Observations, N, M,
                Transition=None, Emission=None, Initial=None):
     """performs the Baum-Welch algorithm for a hidden markov model"""
     try:
+        if not isinstance(Observations, np.ndarray) \
+                or len(Observations.shape) != 1:
+            return None, None
         tol = 1e-10
-        T = len(Observations)
+        T = Observations.shape[0]
         if Transition is None:
             Transition = np.ones((N, N)) / N
         if Emission is None:
             Emission = np.ones((N, M)) / M
         if Initial is None:
             Initial = np.ones((N, 1)) / N
-        a = Transition
-        b = Emission
+        a = Transition.copy()
+        b = Emission.copy()
         cond = False
         norm_a = 0
         norm_b = 0
@@ -93,17 +110,17 @@ def baum_welch(Observations, N, M,
             old_norm_b = norm_b
             old_a = a.copy()
             old_b = b.copy()
-            _, alpha = forward(Observations, b, a, Initial)
-            _, beta = backward(Observations, b, a, Initial)
+            _, alpha = _forward(Observations, b, a, Initial)
+            _, beta = _backward(Observations, b, a, Initial)
             xi = np.zeros((N, N, T - 1))
             for t in range(T - 1):
                 denominator = (np.dot(np.dot(alpha[:, t].T, a) *
-                                      b[:, Observations[t+1]].T,
-                                      beta[:, t+1]))
+                                      b[:, Observations[t + 1]].T,
+                                      beta[:, t + 1]))
                 for i in range(N):
                     numerator = (alpha[i, t] * a[i, :] *
                                  b[:, Observations[t + 1]].T *
-                                 beta[:, t+1].T)
+                                 beta[:, t + 1].T)
                     xi[i, :, t] = numerator / denominator
             gamma = np.sum(xi, axis=1)
             a = np.sum(xi, 2) / np.sum(gamma, axis=1).reshape((-1, 1))
