@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """Calculates the expectation step"""
 import numpy as np

@@ -1,57 +1,53 @@
 #!/usr/bin/env python3
-"""Performs K-means on a dataset"""
+
+"""
+This module contains a function that
+perfoms K-means on a dataset
+"""
+
 import numpy as np
 
 
 def kmeans(X, k, iterations=1000):
     """
-    Performs K-means on a dataset
-    Args:
-        X: is a numpy.ndarray of shape (n, d) containing the dataset
-        - n is the number of data points
-        - d is the number of dimensions for each data point
-        k: is a positive integer containing the number of clusters
-        iterations:
+    perfoms K-means on a dataset
 
-    Returns: C, classes, or None, None on failure
-    C is a numpy.ndarray of shape (k, d) containing the centroid means
-    for each cluster
-    classes is a numpy.ndarray of shape (n,) containing the index of the
-    cluster in C that each data point belongs to
+    X: numpy.ndarray (n, d) containing the dataset that
+    will be used for K-means clustering
+        - n no. of data points
+        - d no. of dimensions for each data point
+    k: positive integer - the no. of clusters
+    iterations: +ve(int) - max no. of iterations perfomed
+
+    return:
+        - C: numpy.ndarray (k, d) containing the centroid
+        for each cluster
+        - clss: numpy.ndarray (n,) containing the index of the
+        cluster in C that each data point belongs to
     """
-    if type(X) is not np.ndarray or len(X.shape) != 2:
+    if type(X) is not np.ndarray or type(k) is not int:
         return (None, None)
-    if type(k) is not int or k <= 0:
+    if len(X.shape) != 2 or k < 0:
         return (None, None)
     if type(iterations) is not int or iterations <= 0:
         return (None, None)
-
-    _, d = X.shape
-    min = np.min(X, axis=0)
-    max = np.max(X, axis=0)
-    # Place centroid randomly for each k
-    centroids = np.random.uniform(min, max, size=(k, d))
-
+    n, d = X.shape
+    if k == 0:
+        return (None, None)
+    low = np.amin(X, axis=0)
+    high = np.amax(X, axis=0)
+    C = np.random.uniform(low, high, size=(k, d))
     for i in range(iterations):
-        copy = centroids.copy()
-        # Calculate the nearest centroid for each point
-        # broadcast rules: Two dimensions are compatible when
-        # they are equal, or one of them is 1. Then operate in that axis
-        distances = np.linalg.norm((X - centroids[:, np.newaxis]), axis=2)
-        # show the nearest centroid where each point is, I called them class
-        classes = distances.argmin(axis=0)
-        for j in range(k):
-            # randomly place centroid (class) if doesn't have a point within it
-            if (X[classes == j].size == 0):
-                centroids[j] = np.random.uniform(min, max, size=(1, d))
-            # move centroid to the mean location
+        clss = np.argmin(np.linalg.norm(X[:, None] - C, axis=-1), axis=-1)
+        new_C = np.copy(C)
+        for c in range(k):
+            if c not in clss:
+                new_C[c] = np.random.uniform(low, high)
             else:
-                centroids[j] = (X[classes == j].mean(axis=0))
-        # update and then copy for comparison
-        distances = np.linalg.norm((X - centroids[:, np.newaxis]), axis=2)
-        classes = distances.argmin(axis=0)
-        # if there is no more changes break
-        if (copy == centroids).all():
-            break
-
-    return centroids, classes
+                new_C[c] = np.mean(X[clss == c], axis=0)
+        if (new_C == C).all():
+            return (C, clss)
+        else:
+            C = new_C
+    clss = np.argmin(np.linalg.norm(X[:, None] - C, axis=-1), axis=-1)
+    return (C, clss)
